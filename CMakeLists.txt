@@ -1,59 +1,65 @@
-cmake_minimum_required(VERSION 3.12)
-project(nuc_ros)
+cmake_minimum_required(VERSION 3.0.2)
+project(nuc)
 
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  shape_msgs
+find_package(catkin REQUIRED 
+  COMPONENTS
+    roscpp
+    rospy
+    shape_msgs
+    nav_msgs
 )
 
 catkin_package(
   INCLUDE_DIRS
     include
+  LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
-    std_srvs
+    rospy
+    shape_msgs
+    nav_msgs
 )
 
-include_directories(include)
-include_directories(SYSTEM
-                    ${catkin_INCLUDE_DIRS})
+include_directories(include
+  ${catkin_INCLUDE_DIRS})
 
-add_library(nuc_ros
+add_library(${PROJECT_NAME}
   src/nuc.cpp
-  src/nuc_main.cpp)
-  
-set_target_properties(nuc_ros PROPERTIES VERSION "${${PROJECT_NAME}_VERSION}")
+  src/nuc_node.cpp)
 
-add_executable(nuc_node src/nuc_main.cpp)
+target_link_libraries(${PROJECT_NAME}
+  ${catkin_LIBRARIES})
 
+add_dependencies(${PROJECT_NAME} 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-set_target_properties(moveit_follow_group_default_capabilities PROPERTIES VERSION "${${PROJECT_NAME}_VERSION}")
-add_dependencies(moveit_follow_group_default_capabilities ${catkin_EXPORTED_TARGETS})
+add_executable(${PROJECT_NAME}_node 
+  src/nuc.cpp
+  src/nuc_node.cpp)
 
-install(TARGETS follow_group list_follow_group_capabilities
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+add_dependencies(${PROJECT_NAME}_node 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-install(TARGETS moveit_follow_group_capabilities_base moveit_follow_group_default_capabilities
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
+target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME})
 
-install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
+set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 
-install(PROGRAMS
-  scripts/load_map scripts/save_map DESTINATION
-  ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(
+  TARGETS
+    ${PROJECT_NAME}_node
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
-install(FILES
-  default_capabilities_plugin_description.xml
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(
+  TARGETS
+    ${PROJECT_NAME}
+  DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
 
-if(CATKIN_ENABLE_TESTING)
-  find_package(rostest REQUIRED)
-  # this test is flaky
-  # add_rostest(test/test_cancel_before_plan_execution.test)
-  add_rostest(test/test_check_state_validity_in_empty_scene.test)
-endif()
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+)
+
 
 
