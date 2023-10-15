@@ -35,7 +35,6 @@ namespace nuc
 		}
 	}
 
-
 	Facet* insertTreeNode(Facet* parent, const std::vector<int>& mesh_tri, const std::vector<double>& mesh_ver, 
 		int tri_index, int subver_index, int child_in_parent_index)
 	{
@@ -99,7 +98,6 @@ namespace nuc
 		std::vector<int> topological_coverage_path;
 		std::vector<double> geometric_coverage_path;
 
-		std::cout << "start generating non-revisiting uniform coverage path" << std::endl;
 		Facet* root_ = nullptr;
 
 		int tri_num = mesh_tri.size() / 3;
@@ -109,7 +107,6 @@ namespace nuc
 		std::unordered_map<int, int> amd; // <first_vertex_index + second_vertex_index * ver_num, facet_index>
 		compute_adjacency_matrix_directed(mesh_tri, tri_num, ver_num, amd);
 
-		std::cout << "size of amd: " << amd.size() << std::endl;
 		// We avoid repetitive coverage
 		std::vector<int> covered;
 		covered.resize(tri_num, 0);
@@ -265,8 +262,6 @@ namespace nuc
 		int position_to_insert = 0;		
 		traverse(root_, mesh_tri, mesh_ver, topological_coverage_path, geometric_coverage_path, position_to_insert);
 
-		std::cout << "size of int path: " << topological_coverage_path.size() << std::endl;
-
 		deleteTreeBranch(root_);
 
 		return std::pair<std::vector<int>, std::vector<double> >(topological_coverage_path, geometric_coverage_path);
@@ -295,23 +290,87 @@ namespace nuc
 
 	NUC::NUC()
 	{
-		std::cout << "We create a NUC" << std::endl;
-		// ros::NodeHandle private_nh("~");
-		// ros::NodeHandle nh("nuc");
 		ros::NodeHandle nh;
 
-		tri_mesh_sub_ = nh.subscribe<shape_msgs::Mesh>("nuc_mesh", 1, [this](auto& mesh){execute(mesh);});
+		tri_mesh_sub_ = nh.subscribe<nuc::MeshWithFrame>("nuc_mesh", 1, [this](auto& mesh){execute(mesh);});
 
 		nuc_pub_ = nh.advertise<nav_msgs::Path>("nuc_path", 1);
-
-		std::cout << "Finish creating a NUC" << std::endl;
 	}
 
-	void NUC::execute(const shape_msgs::Mesh::ConstPtr& the_mesh)
+	void NUC::execute(const nuc::MeshWithFrame::ConstPtr& pMesh)
 	{
-		std::cout << "Receive a mesh" << std::endl;
-		std::cout << "number of facet: " << the_mesh->triangles.size() << std::endl;
-		std::cout << "number of vertices: " << the_mesh->vertices.size() << std::endl;
+		std::pair<std::vector<int>, std::vector<double> > result;
+		std::vector<int> mesh_tri(pMesh->nuc_mesh.triangles.size()*3);
+		std::vector<double> mesh_ver(pMesh->nuc_mesh.vertices.size()*3);
+		for(unsigned int i = 0; i < pMesh->nuc_mesh.triangles.size(); ++i)
+		{
+			mesh_tri[i*3] = pMesh->nuc_mesh.triangles[i].vertex_indices[0];
+			mesh_tri[i*3+1] = pMesh->nuc_mesh.triangles[i].vertex_indices[1];
+			mesh_tri[i*3+2] = pMesh->nuc_mesh.triangles[i].vertex_indices[2];
+		}
+
+		for(unsigned int i = 0; i < pMesh->nuc_mesh.vertices.size(); ++i)
+		{
+			mesh_ver[i*3] = pMesh->nuc_mesh.vertices[i].x;
+			mesh_ver[i*3+1] = pMesh->nuc_mesh.vertices[i].y;
+			mesh_ver[i*3+2] = pMesh->nuc_mesh.vertices[i].z;
+		}
+
+		result = nuc(mesh_tri, mesh_ver);
+
+		nav_msgs::Path result_path;
+		result_path.header.stamp = ros::Time::now();
+		result_path.header.frame_id = pMesh->nuc_frame;
+		int num_waypoint = result.first.size();
+		result_path.poses.resize(num_waypoint);
+
+		for(unsigned int i = 0; i < num_waypoint; ++i)
+		{
+			result_path.poses[i].pose.position.x = result.second[i*3];
+			result_path.poses[i].pose.position.y = result.second[i*3+1];
+			result_path.poses[i].pose.position.z = result.second[i*3+2];
+			result_path.poses[i].pose.orientation.w = 1;
+		}
+
+		nuc_pub_.publish(result_path);
+	}
+
+	bool NUC::executeService(nuc::GetNuc::Request& req, nuc::GetNuc::Response& resp)
+	{
+		std::pair<std::vector<int>, std::vector<double> > result;
+		std::vector<int> mesh_tri(req.nuc_mesh.triangles.size()*3);
+		std::vector<double> mesh_ver(req.nuc_mesh.vertices.size()*3);
+		for(unsigned int i = 0; i < req.nuc_mesh.triangles.size(); ++i)
+		{
+			mesh_tri[i*3] = req.nuc_mesh.triangles[i].vertex_indices[0];
+			mesh_tri[i*3+1] = req.nuc_mesh.triangles[i].vertex_indices[1];
+			mesh_tri[i*3+2] = req.nuc_mesh.triangles[i].vertex_indices[2];
+		}
+
+		for(unsigned int i = 0; i < req.nuc_mesh.vertices.size(); ++i)
+		{
+			mesh_ver[i*3] = req.nuc_mesh.vertices[i].x;
+			mesh_ver[i*3+1] = req.nuc_mesh.vertices[i].y;
+			mesh_ver[i*3+2] = req.nuc_mesh.vertices[i].z;
+		}
+
+		result = nuc(mesh_tri, mesh_ver);
+
+		// nav_msgs::Path result_path;
+		resp.nuc_path.header.stamp = ros::Time::now();
+		resp.nuc_path.header.frame_id = req.nuc_frame;
+		int num_waypoint = result.first.size();
+		resp.nuc_path.poses.resize(num_waypoint);
+
+		for(unsigned int i = 0; i < num_waypoint; ++i)
+		{
+			resp.nuc_path.poses[i].pose.position.x = result.second[i*3];
+			resp.nuc_path.poses[i].pose.position.y = result.second[i*3+1];
+			resp.nuc_path.poses[i].pose.position.z = result.second[i*3+2];
+			resp.nuc_path.poses[i].pose.orientation.w = 1;
+		}
+
+		return true;
 	}
 
 }

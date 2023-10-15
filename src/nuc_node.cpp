@@ -2,7 +2,6 @@
 #include <nuc/nuc.h>
 #include <ros/ros.h>
 
-
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "nuc_node");

@@ -2,11 +2,11 @@
 #include <vector>
 #include <ros/ros.h>
 #include <shape_msgs/Mesh.h>
+#include <nuc/GetNuc.h>
+#include <nuc/MeshWithFrame.h>
 
 namespace nuc
 {
-
-
     struct Facet
     {
     public: 
@@ -73,8 +73,9 @@ namespace nuc
 		public:
 			NUC();
 
-			void execute(const shape_msgs::Mesh::ConstPtr& the_mesh);
-	
+			void execute(const nuc::MeshWithFrame::ConstPtr& the_mesh);
+
+			bool executeService(nuc::GetNuc::Request& req, nuc::GetNuc::Response& resp);
 
 		private:
 			ros::Subscriber tri_mesh_sub_;

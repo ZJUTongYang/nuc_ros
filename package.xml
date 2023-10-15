@@ -17,19 +17,10 @@
 
     <build_depend>cmake_modules</build_depend>
     <build_depend>message_generation</build_depend>
-    <!-- <build_depend>shape_msgs</build_depend>
-    <build_depend>roscpp</build_depend>
-    <build_depend>rospy</build_depend>
-     -->
 
     <depend>roscpp</depend>
     <depend>rospy</depend>
     <depend>shape_msgs</depend>
     <depend>nav_msgs</depend>
-
-    <!--These deps aren't strictly needed, but given the default parameters require them to work, we'll enforce that they build -->
-    <!-- <depend>shape_msgs</depend>
-    <depend>roscpp</depend>
-    <depend>rospy</depend> -->
 
 </package>

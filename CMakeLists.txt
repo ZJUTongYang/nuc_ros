@@ -9,6 +9,24 @@ find_package(catkin REQUIRED
     nav_msgs
 )
 
+add_message_files(
+  DIRECTORY msg
+  FILES
+  MeshWithFrame.msg
+)
+
+add_service_files(
+  DIRECTORY srv
+  FILES
+  GetNuc.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  nav_msgs
+  shape_msgs
+)
+
 catkin_package(
   INCLUDE_DIRS
     include
@@ -26,6 +44,8 @@ include_directories(include
 add_library(${PROJECT_NAME}
   src/nuc.cpp
   src/nuc_node.cpp)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-O3")
 
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES})
@@ -61,5 +81,5 @@ install(DIRECTORY include/${PROJECT_NAME}/
   FILES_MATCHING PATTERN "*.h"
 )
 
-
+catkin_package()
 

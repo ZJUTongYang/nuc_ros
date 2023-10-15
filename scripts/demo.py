@@ -3,66 +3,44 @@
 import sys
 import trimesh
 import rospy
-from shape_msgs.msg import Mesh
+from shape_msgs.msg import Mesh, MeshTriangle
 from geometry_msgs.msg import Point
-
+from nuc.msg import MeshWithFrame
 
 if __name__ == '__main__':
+    
     if len(sys.argv) != 2:
         print("Usage: demo.py <stl_file_path>")
         sys.exit(1)
 
     rospy.init_node("nuc_demo", anonymous=True)
 
-    mesh_publisher = rospy.Publisher('/nuc_mesh', Mesh, queue_size=1)
+    mesh_publisher = rospy.Publisher('/nuc_mesh', MeshWithFrame, queue_size=10)
 
-    # filename = sys.argv[1]
-
-    print(filename)
+    filename = sys.argv[1]
 
     mesh = trimesh.load_mesh(filename)
 
-    mesh_msg = Mesh()
+    mesh_msg = MeshWithFrame()
 
     for vertex in mesh.vertices:
         point = Point()
         point.x = vertex[0]
         point.y = vertex[1]
         point.z = vertex[2]
-        mesh_msg.vertices.append(point)
+        mesh_msg.nuc_mesh.vertices.append(point)
 
     for face in mesh.faces:
-        mesh_msg.triangles.append(face)
+        tri = MeshTriangle()
+        tri.vertex_indices[0] = face[0]
+        tri.vertex_indices[1] = face[1]
+        tri.vertex_indices[2] = face[2]
+        mesh_msg.nuc_mesh.triangles.append(tri)
 
-    mesh_publisher.publish(mesh_msg)
+    mesh_msg.nuc_frame = "nuc_demo_test_frame"
 
-# mesh_tri = stl_data.faces
-# mesh_ver = stl_data.vertices
+    rate = rospy.Rate(1)  # Publish at 10 Hz
 
-# mesh_tri_row = np.reshape(mesh_tri, (mesh_tri.shape[0]*mesh_tri.shape[1], -1))
-# mesh_ver_row = np.reshape(mesh_ver, (mesh_ver.shape[0]*mesh_ver.shape[1], -1))
-
-# result = nuc_tmech23.run(mesh_tri_row, mesh_ver_row)
-
-# topological_coverage_path = result[0]
-# geometric_coverage_path = result[1]
-
-# print(len(topological_coverage_path))
-# print(len(geometric_coverage_path))
-# print(result)
-
-# result = np.reshape(geometric_coverage_path, (int(len(geometric_coverage_path)/3), 3))
-
-# ## We output the data (for the visualisation in MATLAB)
-# mesh_tri_f = open("mesh_tri.txt", "w+")
-# mesh_ver_f = open("mesh_ver.txt", "w+")
-# path_f = open("result_path.txt", "w+")
-
-# np.savetxt(mesh_tri_f, mesh_tri)
-# np.savetxt(mesh_ver_f, mesh_ver)
-# np.savetxt(path_f, result)
-
-# mesh_tri_f.close()
-# mesh_ver_f.close()
-# path_f.close()
-
+    while not rospy.is_shutdown():
+        mesh_publisher.publish(mesh_msg)
+        rate.sleep()
